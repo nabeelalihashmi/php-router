@@ -192,7 +192,7 @@ class RouterCommand
             }
 
             if (property_exists($controller, 'middlewareBefore') && is_array($controller->middlewareBefore)) {
-                foreach ($controller->middleware as $middleware) {
+                foreach ($controller->middlewareBefore as $middleware) {
                     $this->beforeAfter($middleware);
                 }
             }
@@ -264,11 +264,12 @@ class RouterCommand
     {
         $parameters = [];
         foreach ($reflection->getParameters() as $key => $param) {
-            if (!is_null($param->getClass()) && $param->getClass()->getName() instanceof Request) {
+            $class = $param->getClass();
+            if (!is_null($class) && $class->isInstance($this->request)) {
                 $parameters[] = $this->request;
-            } elseif (!is_null($param->getClass()) && $param->getClass()->getName() instanceof Response) {
+            } elseif (!is_null($class) && $class->isInstance($this->response)) {
                 $parameters[] = $this->response;
-            } elseif (!is_null($param->getClass())) {
+            } elseif (!is_null($class)) {
                 $parameters[] = null;
             } else {
                 if (empty($uriParams)) {
