@@ -1,14 +1,12 @@
 <?php
-/**
- * @ Package: Router - simple router class for php
- * @ Class: RouterCommand
- * @ Author: izni burak demirtas / @izniburak <info@burakdemirtas.org>
- * @ Web: http://burakdemirtas.org
- * @ URL: https://github.com/izniburak/php-router
- * @ Licence: The MIT License (MIT) - Copyright (c) - http://opensource.org/licenses/MIT
- */
 
 namespace Buki\Router;
+
+use ReflectionFunction;
+use ReflectionMethod;
+use Reflector;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class RouterCommand
 {
@@ -17,66 +15,116 @@ class RouterCommand
      */
     protected static $instance = null;
 
+    /**
+     * @var string
+     */
     protected $baseFolder;
+
+    /**
+     * @var array
+     */
     protected $paths;
+
+    /**
+     * @var array
+     */
     protected $namespaces;
+
+    /**
+     * @var Request
+     */
+    private $request;
+
+    /**
+     * @var Response
+     */
+    private $response;
+
+    /**
+     * @var array
+     */
+    private $middlewares = [];
 
     /**
      * RouterCommand constructor.
      *
-     * @param $baseFolder
-     * @param $paths
-     * @param $namespaces
+     * @param string   $baseFolder
+     * @param array    $paths
+     * @param array    $namespaces
+     * @param Request  $request
+     * @param Response $response
+     * @param array    $middlewares
      */
-    public function __construct($baseFolder, $paths, $namespaces)
-    {
+    public function __construct(
+        string $baseFolder,
+        array $paths,
+        array $namespaces,
+        Request $request,
+        Response $response,
+        array $middlewares
+    ) {
         $this->baseFolder = $baseFolder;
         $this->paths = $paths;
         $this->namespaces = $namespaces;
+        $this->request = $request;
+        $this->response = $response;
+        $this->middlewares = $middlewares;
+
+        // Execute general Middlewares
+        foreach ($this->middlewares['middlewares'] as $middleware) {
+            $this->beforeAfter($middleware);
+        }
+
     }
 
-    public function getMiddlewareInfo()
+    /**
+     * @return array
+     */
+    public function getMiddlewareInfo(): array
     {
         return [
-            'path' => $this->baseFolder . '/' . $this->paths['middlewares'],
+            'path' => "{$this->baseFolder}/{$this->paths['middlewares']}",
             'namespace' => $this->namespaces['middlewares'],
         ];
     }
 
-    public function getControllerInfo()
+    /**
+     * @return array
+     */
+    public function getControllerInfo(): array
     {
         return [
-            'path' => $this->baseFolder . '/' . $this->paths['controllers'],
+            'path' => "{$this->baseFolder}/{$this->paths['controllers']}",
             'namespace' => $this->namespaces['controllers'],
         ];
     }
 
     /**
-     * @param $baseFolder
-     * @param $paths
-     * @param $namespaces
+     * @param string   $baseFolder
+     * @param array    $paths
+     * @param array    $namespaces
+     * @param Request  $request
+     * @param Response $response
+     * @param array    $middlewares
      *
-     * @return RouterCommand|static
+     * @return RouterCommand
      */
-    public static function getInstance($baseFolder, $paths, $namespaces)
-    {
+    public static function getInstance(
+        string $baseFolder,
+        array $paths,
+        array $namespaces,
+        Request $request,
+        Response $response,
+        array $middlewares
+    ) {
         if (null === self::$instance) {
-            self::$instance = new static($baseFolder, $paths, $namespaces);
+            self::$instance = new static(
+                $baseFolder, $paths, $namespaces,
+                $request, $response, $middlewares
+            );
         }
-        return self::$instance;
-    }
 
-    /**
-     * Throw new Exception for Router Error
-     *
-     * @param $message
-     *
-     * @return RouterException
-     * @throws
-     */
-    public function exception($message = '')
-    {
-        return new RouterException($message);
+        return self::$instance;
     }
 
     /**
@@ -89,31 +137,32 @@ class RouterCommand
      */
     public function beforeAfter($command)
     {
-        if (! is_null($command)) {
-            $info = $this->getMiddlewareInfo();
-            if (is_array($command)) {
-                foreach ($command as $value) {
-                    $this->beforeAfter($value);
-                }
-            } elseif (is_string($command)) {
-                $middleware = explode(':', $command);
-                $params = [];
-                if (count($middleware) > 1) {
-                    $params = explode(',', $middleware[1]);
-                }
-                $controller = $this->resolveClass($middleware[0], $info['path'], $info['namespace']);
-                if (method_exists($controller, 'handle')) {
-                    $response = call_user_func_array([$controller, 'handle'], $params);
-                    if ($response !== true) {
-                        echo $response;
-                        exit;
-                    }
+        if (empty($command)) {
+            return;
+        }
 
-                    return $response;
-                }
-
-                return $this->exception('handle() method is not found in <b>'.$command.'</b> class.');
+        $info = $this->getMiddlewareInfo();
+        if (is_array($command)) {
+            foreach ($command as $value) {
+                $this->beforeAfter($value);
             }
+        } elseif (is_string($command)) {
+            $middleware = explode(':', $command);
+            $params = [];
+            if (count($middleware) > 1) {
+                $params = explode(',', $middleware[1]);
+            }
+
+            $resolvedMiddleware = $this->resolveMiddleware($middleware[0]);
+            $response = false;
+            if (is_array($resolvedMiddleware)) {
+                foreach ($resolvedMiddleware as $middleware) {
+                    $response = $this->runMiddleware($command, $this->resolveMiddleware($middleware), $params, $info);
+                }
+                return $response;
+            }
+
+            return $this->runMiddleware($command, $resolvedMiddleware, $params, $info);
         }
 
         return;
@@ -128,43 +177,54 @@ class RouterCommand
      * @return mixed|void
      * @throws
      */
-    public function runRoute($command, $params = null)
+    public function runRoute($command, $params = [])
     {
         $info = $this->getControllerInfo();
-        if (! is_object($command)) {
-            $segments = explode('@', $command);
-            $controllerClass = str_replace([$info['namespace'], '\\', '.'], ['', '/', '/'], $segments[0]);
-            $controllerMethod = $segments[1];
+        if (!is_object($command)) {
+            [$class, $method] = explode('@', $command);
+            $class = str_replace([$info['namespace'], '\\', '.'], ['', '/', '/'], $class);
 
-            $controller = $this->resolveClass($controllerClass, $info['path'], $info['namespace']);
-            if (method_exists($controller, $controllerMethod)) {
-                echo $this->runMethodWithParams([$controller, $controllerMethod], $params);
-                return;
+            $controller = $this->resolveClass($class, $info['path'], $info['namespace']);
+            if (!method_exists($controller, $method)) {
+                return $this->exception("{$method} method is not found in {$class} class.");
             }
 
-            return $this->exception($controllerMethod . ' method is not found in '.$controllerClass.' class.');
-        } else {
-            echo $this->runMethodWithParams($command, $params);
+            if (property_exists($controller, 'middlewareBefore') && is_array($controller->middlewareBefore)) {
+                foreach ($controller->middleware as $middleware) {
+                    $this->beforeAfter($middleware);
+                }
+            }
+
+            $response = $this->runMethodWithParams([$controller, $method], $params);
+
+            if (property_exists($controller, 'middlewareAfter') && is_array($controller->middlewareAfter)) {
+                foreach ($controller->middlewareAfter as $middleware) {
+                    $this->beforeAfter($middleware);
+                }
+            }
+
+            return $response;
         }
 
-        return;
+        return $this->runMethodWithParams($command, $params);
     }
 
     /**
      * Resolve Controller or Middleware class.
      *
-     * @param $class
-     * @param $path
-     * @param $namespace
+     * @param string $class
+     * @param string $path
+     * @param string $namespace
      *
      * @return object
      * @throws
      */
-    protected function resolveClass($class, $path, $namespace)
+    protected function resolveClass(string $class, string $path, string $namespace)
     {
-        $file = realpath(rtrim($path, '/') . '/' . $class . '.php');
-        if (! file_exists($file)) {
-            return $this->exception($class . ' class is not found. Please, check file.');
+        $class = str_replace([$namespace, '\\'], ['', '/'], $class);
+        $file = realpath("{$path}/{$class}.php");
+        if (!file_exists($file)) {
+            return $this->exception("{$class} class is not found. Please check the file.");
         }
 
         $class = $namespace . str_replace('/', '\\', $class);
@@ -176,13 +236,128 @@ class RouterCommand
     }
 
     /**
-     * @param $function
-     * @param $params
+     * @param array|\Closure $function
+     * @param array          $params
      *
-     * @return mixed
+     * @return Response|mixed
+     * @throws \ReflectionException
      */
-    protected function runMethodWithParams($function, $params)
+    protected function runMethodWithParams($function, array $params)
     {
-        return call_user_func_array($function, (!is_null($params) ? $params : []));
+        $reflection = is_array($function)
+            ? new ReflectionMethod($function[0], $function[1])
+            : new ReflectionFunction($function);
+        $parameters = $this->resolveCallbackParameters($reflection, $params);
+        $response = call_user_func_array($function, $parameters);
+        return $this->sendResponse($response);
+    }
+
+    /**
+     * @param Reflector $reflection
+     * @param array     $uriParams
+     *
+     * @return array
+     */
+    protected function resolveCallbackParameters(Reflector $reflection, array $uriParams): array
+    {
+        $parameters = [];
+        foreach ($reflection->getParameters() as $key => $param) {
+            if (!is_null($param->getClass()) && $param->getClass()->getName() === Request::class) {
+                $parameters[] = $this->request;
+            } elseif (!is_null($param->getClass()) && $param->getClass()->getName() === Response::class) {
+                $parameters[] = $this->response;
+            } elseif (!is_null($param->getClass())) {
+                $parameters[] = null;
+            } else {
+                if (empty($uriParams)) {
+                    continue;
+                }
+                $uriParams = array_reverse($uriParams);
+                $parameters[] = array_pop($uriParams);
+            }
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * @param $command
+     * @param $middleware
+     * @param $params
+     * @param $info
+     *
+     * @return bool|RouterException
+     * @throws \ReflectionException
+     */
+    protected function runMiddleware(string $command, string $middleware, array $params, array $info)
+    {
+        $middlewareMethod = 'handle'; // For now, it's constant.
+        $controller = $this->resolveClass($middleware, $info['path'], $info['namespace']);
+        if (!method_exists($controller, $middlewareMethod)) {
+            return $this->exception("{$middlewareMethod}() method is not found in {$command} class.");
+        }
+
+        $parameters = $this->resolveCallbackParameters(new ReflectionMethod($controller, $middlewareMethod), $params);
+        $response = call_user_func_array([$controller, $middlewareMethod], $parameters);
+        if ($response !== true) {
+            return $response;
+        }
+
+        return $response;
+    }
+
+    /**
+     * @param string $middleware
+     *
+     * @return array|string
+     */
+    protected function resolveMiddleware(string $middleware)
+    {
+        $middlewares = $this->middlewares;
+        if (isset($middlewares['middlewareGroups'][$middleware])) {
+            return $middlewares['middlewareGroups'][$middleware];
+        }
+
+        $name = explode(':', $middleware)[0];
+        if (isset($middlewares['routeMiddlewares'][$name])) {
+            return $middlewares['routeMiddlewares'][$name];
+        }
+
+        return $middleware;
+    }
+
+    /**
+     * @param $response
+     *
+     * @return Response|mixed
+     */
+    protected function sendResponse($response)
+    {
+        if (is_array($response)) {
+            $this->response->headers->set('Content-Type', 'application/json');;
+            return $this->response
+                ->setContent(json_encode($response))
+                ->prepare($this->request)
+                ->send();
+        }
+
+        if (!is_string($response)) {
+            return $response;
+        }
+
+        return $this->response->setContent($response)->prepare($this->request)->send();
+    }
+
+    /**
+     * Throw new Exception for Router Error
+     *
+     * @param $message
+     *
+     * @return RouterException
+     * @throws
+     */
+    protected function exception($message = '')
+    {
+        return new RouterException($message);
     }
 }

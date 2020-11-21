@@ -1,21 +1,60 @@
 <?php
-/**
- * @ Package: Router - simple router class for php
- * @ Class: RouterCommand
- * @ Author: izni burak demirtas / @izniburak <info@burakdemirtas.org>
- * @ Web: http://burakdemirtas.org
- * @ URL: https://github.com/izniburak/php-router
- * @ Licence: The MIT License (MIT) - Copyright (c) - http://opensource.org/licenses/MIT
- */
 
 namespace Buki\Router;
+
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class RouterRequest
 {
     /**
-     * @var string $validMethods Valid methods for Requests
+     * @var string $validMethods Valid methods for Router
      */
-    public static $validMethods = 'GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|ANY|AJAX|XPOST|XPUT|XDELETE|XPATCH';
+    protected $validMethods = 'GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH|ANY|AJAX|XPOST|XPUT|XDELETE|XPATCH';
+    /**
+     * @var Request $request
+     */
+    private $request;
+    /**
+     * @var Response $response
+     */
+    private $response;
+
+    /**
+     * RouterRequest constructor.
+     *
+     * @param Request  $request
+     * @param Response $response
+     */
+    public function __construct(Request $request, Response $response)
+    {
+        $this->request = $request;
+        $this->response = $response;
+    }
+
+    /**
+     * @return Request
+     */
+    public function symfonyRequest(): Request
+    {
+        return $this->request;
+    }
+
+    /**
+     * @return Response
+     */
+    public function symfonyResponse(): Response
+    {
+        return $this->response;
+    }
+
+    /**
+     * @return string
+     */
+    public function validMethods(): string
+    {
+        return $this->validMethods;
+    }
 
     /**
      * Request method validation
@@ -25,18 +64,18 @@ class RouterRequest
      *
      * @return bool
      */
-    public static function validMethod($data, $method)
+    public function validMethod(string $data, string $method): bool
     {
         $valid = false;
         if (strstr($data, '|')) {
             foreach (explode('|', $data) as $value) {
-                $valid = self::checkMethods($value, $method);
+                $valid = $this->checkMethods($value, $method);
                 if ($valid) {
                     break;
                 }
             }
         } else {
-            $valid = self::checkMethods($data, $method);
+            $valid = $this->checkMethods($data, $method);
         }
 
         return $valid;
@@ -47,23 +86,11 @@ class RouterRequest
      *
      * @return string
      */
-    public static function getRequestMethod()
+    public function getMethod()
     {
-        // Take the method as found in $_SERVER
-        $method = $_SERVER['REQUEST_METHOD'];
-        // If it's a HEAD request override it to being GET and prevent any output, as per HTTP Specification
-        // @url http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.4
-        if ($method === 'HEAD') {
-            ob_start();
-            $method = 'GET';
-        } elseif ($method === 'POST') {
-            $headers = self::getRequestHeaders();
-            if (isset($headers['X-HTTP-Method-Override']) &&
-                in_array($headers['X-HTTP-Method-Override'], ['PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'])) {
-                $method = $headers['X-HTTP-Method-Override'];
-            } elseif (! empty($_POST['_method'])) {
-                $method = strtoupper($_POST['_method']);
-            }
+        $method = $this->request->getMethod();
+        if (!empty($_POST['_method'])) {
+            $method = strtoupper($_POST['_method']);
         }
 
         return $method;
@@ -77,14 +104,15 @@ class RouterRequest
      *
      * @return bool
      */
-    protected static function checkMethods($value, $method)
+    protected function checkMethods(string $value, string $method): bool
     {
-        if (in_array($value, explode('|', self::$validMethods))) {
-            if (self::isAjax() && $value === 'AJAX') {
+        if (in_array($value, explode('|', $this->validMethods))) {
+            if ($this->request->isXmlHttpRequest() && $value === 'AJAX') {
                 return true;
             }
 
-            if (self::isAjax() && strpos($value, 'X') === 0 && $method === ltrim($value, 'X')) {
+            if ($this->request->isXmlHttpRequest() && strpos($value, 'X') === 0
+                && $method === ltrim($value, 'X')) {
                 return true;
             }
 
@@ -94,43 +122,5 @@ class RouterRequest
         }
 
         return false;
-    }
-
-    /**
-     * Check ajax request
-     *
-     * @return bool
-     */
-    protected static function isAjax()
-    {
-        return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest');
-    }
-
-    /**
-     * Get all request headers
-     *
-     * @return array
-     */
-    protected static function getRequestHeaders()
-    {
-        // If getallheaders() is available, use that
-        if (function_exists('getallheaders')) {
-            return getallheaders();
-        }
-
-        // Method getallheaders() not available: manually extract 'm
-        $headers = [];
-        foreach ($_SERVER as $name => $value) {
-            if (substr($name, 0, 5) == 'HTTP_' || $name === 'CONTENT_TYPE' || $name === 'CONTENT_LENGTH') {
-                $headerKey = str_replace(
-                    [' ', 'Http'],
-                    ['-', 'HTTP'],
-                    ucwords(strtolower(str_replace('_', ' ', substr($name, 5))))
-                );
-                $headers[$headerKey] = $value;
-            }
-        }
-
-        return $headers;
     }
 }
