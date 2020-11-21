@@ -303,7 +303,8 @@ class RouterCommand
         $parameters = $this->resolveCallbackParameters(new ReflectionMethod($controller, $middlewareMethod), $params);
         $response = call_user_func_array([$controller, $middlewareMethod], $parameters);
         if ($response !== true) {
-            return $response;
+            $this->sendResponse($response);
+            exit;
         }
 
         return $response;
