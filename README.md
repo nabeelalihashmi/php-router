@@ -58,7 +58,7 @@ use Buki\Router;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-$router = new Buki\Router();
+$router = new Router;
 
 // For basic GET URI
 $router->get('/', function(Request $request, Response $response) {

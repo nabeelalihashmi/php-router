@@ -2,6 +2,8 @@
 
 namespace Buki\Router;
 
+use Closure;
+use ReflectionException;
 use ReflectionFunction;
 use ReflectionMethod;
 use Reflector;
@@ -33,17 +35,17 @@ class RouterCommand
     /**
      * @var Request
      */
-    private $request;
+    protected $request;
 
     /**
      * @var Response
      */
-    private $response;
+    protected $response;
 
     /**
      * @var array
      */
-    private $middlewares = [];
+    protected $middlewares = [];
 
     /**
      * RouterCommand constructor.
@@ -236,11 +238,11 @@ class RouterCommand
     }
 
     /**
-     * @param array|\Closure $function
-     * @param array          $params
+     * @param array|Closure $function
+     * @param array         $params
      *
      * @return Response|mixed
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     protected function runMethodWithParams($function, array $params)
     {
@@ -262,9 +264,9 @@ class RouterCommand
     {
         $parameters = [];
         foreach ($reflection->getParameters() as $key => $param) {
-            if (!is_null($param->getClass()) && $param->getClass()->getName() === Request::class) {
+            if (!is_null($param->getClass()) && $param->getClass()->getName() instanceof Request) {
                 $parameters[] = $this->request;
-            } elseif (!is_null($param->getClass()) && $param->getClass()->getName() === Response::class) {
+            } elseif (!is_null($param->getClass()) && $param->getClass()->getName() instanceof Response) {
                 $parameters[] = $this->response;
             } elseif (!is_null($param->getClass())) {
                 $parameters[] = null;
@@ -287,7 +289,7 @@ class RouterCommand
      * @param $info
      *
      * @return bool|RouterException
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     protected function runMiddleware(string $command, string $middleware, array $params, array $info)
     {
@@ -334,7 +336,7 @@ class RouterCommand
     protected function sendResponse($response)
     {
         if (is_array($response)) {
-            $this->response->headers->set('Content-Type', 'application/json');;
+            $this->response->headers->set('Content-Type', 'application/json');
             return $this->response
                 ->setContent(json_encode($response))
                 ->prepare($this->request)
@@ -342,7 +344,7 @@ class RouterCommand
         }
 
         if (!is_string($response)) {
-            return $response;
+            return $response instanceof Response ? $response->send() : print($response);
         }
 
         return $this->response->setContent($response)->prepare($this->request)->send();
