@@ -69,18 +69,17 @@ $router->get('/', function(Request $request, Response $response) {
     # return 'Hello World!';
 });
 
-// For auto discover all methods and URIs
-$router->get('/controller', 'TestController@main');
+// For basic GET URI by using a Controller class.
+$router->get('/test', 'TestController@main');
+
+// For auto discovering all methods and URIs
+$router->controller('/users', 'UserController');
 
 $router->run();
 ```
 
 ## Docs
 Documentation page: [Buki\Router Docs][doc-url]
-
-## ToDo
-- Write Test
-- Write Documentation
 
 ## Support
 [izniburak's homepage][author-url]
