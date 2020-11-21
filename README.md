@@ -17,6 +17,7 @@ simple Router class for PHP. with the support of Controllers and Middlewares.
 
 ### Features
 - Supports GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD, AJAX and ANY request methods
+- Easy access and manage Request and Response via `symfony/http-foundation` package.
 - Controllers support (Example: HomeController@about)
 - Before and after Route Middlewares support
 - Static Route Patterns
@@ -34,7 +35,7 @@ composer.json file:
 ```json
 {
     "require": {
-        "izniburak/router": "^1"
+        "izniburak/router": "^2"
     }
 }
 ```
@@ -53,11 +54,22 @@ $ composer require izniburak/router
 ```php
 require 'vendor/autoload.php';
 
+use Buki\Router;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+
 $router = new Buki\Router();
 
-$router->get('/', function() {
-    return 'Hello World!';
+// For basic GET URI
+$router->get('/', function(Request $request, Response $response) {
+    $response->setContent('Hello World');
+    return $response->send();
+
+    # OR
+    # return 'Hello World!';
 });
+
+// For auto discover all methods and URIs
 $router->get('/controller', 'TestController@main');
 
 $router->run();
