@@ -14,17 +14,18 @@ class RouterException
     /**
      * Create Exception Class.
      *
-     * @param $message
+     * @param string $message
      *
-     * @return string
+     * @param int    $statusCode
+     *
      * @throws Exception
      */
-    public function __construct($message)
+    public function __construct(string $message, int $statusCode = 500)
     {
+        http_response_code($statusCode);
         if (self::$debug) {
-            throw new Exception($message, 1);
+            throw new Exception($message, $statusCode);
         }
-
         die("<h2>Opps! An error occurred.</h2> {$message}");
     }
 }

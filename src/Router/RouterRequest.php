@@ -86,11 +86,12 @@ class RouterRequest
      *
      * @return string
      */
-    public function getMethod()
+    public function getMethod(): string
     {
         $method = $this->request->getMethod();
-        if (!empty($_POST['_method'])) {
-            $method = strtoupper($_POST['_method']);
+        $formMethod = $this->request->request->get('_method');
+        if (!empty($formMethod)) {
+            $method = strtoupper($formMethod);
         }
 
         return $method;

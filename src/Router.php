@@ -699,6 +699,7 @@ class Router
         $beforeMiddlewares = array_merge($beforeMiddlewares, $this->calculateMiddleware($options['before'] ?? []));
         $afterMiddlewares = array_merge($afterMiddlewares, $this->calculateMiddleware($options['after'] ?? []));
 
+        $callback = is_array($callback) ? implode('@', $callback) : $callback;
         $routeName = is_string($callback)
             ? strtolower(preg_replace(
                 '/[^\w]/i', '.', str_replace($this->namespaces['controllers'], '', $callback)

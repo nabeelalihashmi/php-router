@@ -159,7 +159,12 @@ class RouterCommand
             $response = false;
             if (is_array($resolvedMiddleware)) {
                 foreach ($resolvedMiddleware as $middleware) {
-                    $response = $this->runMiddleware($command, $this->resolveMiddleware($middleware), $params, $info);
+                    $response = $this->runMiddleware(
+                        $command,
+                        $this->resolveMiddleware($middleware),
+                        $params,
+                        $info
+                    );
                 }
                 return $response;
             }
@@ -341,7 +346,6 @@ class RouterCommand
             $this->response->headers->set('Content-Type', 'application/json');
             return $this->response
                 ->setContent(json_encode($response))
-                ->prepare($this->request)
                 ->send();
         }
 
@@ -349,7 +353,7 @@ class RouterCommand
             return $response instanceof Response ? $response->send() : print($response);
         }
 
-        return $this->response->setContent($response)->prepare($this->request)->send();
+        return $this->response->setContent($response)->send();
     }
 
     /**
