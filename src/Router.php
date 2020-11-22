@@ -536,17 +536,7 @@ class Router
      */
     protected function runRouteMiddleware(array $middleware, string $type): void
     {
-        if ($type === 'before') {
-            if (!is_null($middleware['group'])) {
-                $this->routerCommand()->beforeAfter($middleware['group'][$type]);
-            }
-            $this->routerCommand()->beforeAfter($middleware[$type]);
-        } else {
-            $this->routerCommand()->beforeAfter($middleware[$type]);
-            if (!is_null($middleware['group'])) {
-                $this->routerCommand()->beforeAfter($middleware['group'][$type]);
-            }
-        }
+        $this->routerCommand()->beforeAfter($middleware[$type]);
     }
 
     /**

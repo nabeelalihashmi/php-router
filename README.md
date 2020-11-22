@@ -63,7 +63,7 @@ $router = new Router;
 // For basic GET URI
 $router->get('/', function(Request $request, Response $response) {
     $response->setContent('Hello World');
-    return $response->send();
+    return $response;
 
     # OR
     # return 'Hello World!';
