@@ -102,6 +102,6 @@ Documentation page: [Buki\Router Docs][doc-url]
 - [izniburak](https://github.com/izniburak) İzni Burak Demirtaş - creator, maintainer
 
 [mit-url]: http://opensource.org/licenses/MIT
-[doc-url]: https://github.com/izniburak/php-router/wiki/1.-Home
+[doc-url]: https://github.com/izniburak/php-router/wiki
 [author-url]: http://burakdemirtas.org
 [twitter-url]: https://twitter.com/izniburak
