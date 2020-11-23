@@ -713,7 +713,7 @@ class Router
             'before' => $beforeMiddlewares,
             'after' => $afterMiddlewares,
         ];
-        array_push($this->routes, $data);
+        array_unshift($this->routes, $data);
     }
 
     /**

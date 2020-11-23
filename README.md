@@ -35,7 +35,7 @@ composer.json file:
 ```json
 {
     "require": {
-        "izniburak/router": "^2"
+        "izniburak/router": "^2.0"
     }
 }
 ```
