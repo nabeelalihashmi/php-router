@@ -3,6 +3,7 @@
 namespace Buki\Router;
 
 use Closure;
+use Exception;
 use ReflectionException;
 use ReflectionFunction;
 use ReflectionMethod;
@@ -13,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 class RouterCommand
 {
     /**
-     * @var RouterCommand|null Class instance variable
+     * @var RouterCommand Class instance variable
      */
     protected static $instance = null;
 
@@ -359,13 +360,14 @@ class RouterCommand
     /**
      * Throw new Exception for Router Error
      *
-     * @param $message
+     * @param string $message
+     * @param int    $statusCode
      *
      * @return RouterException
-     * @throws
+     * @throws Exception
      */
-    protected function exception($message = '')
+    protected function exception($message = '', $statusCode = 500)
     {
-        return new RouterException($message);
+        return new RouterException($message, $statusCode);
     }
 }

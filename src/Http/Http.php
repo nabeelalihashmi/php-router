@@ -1,6 +1,6 @@
 <?php
 
-namespace Buki\Http;
+namespace Buki\Router\Http;
 
 abstract class Http
 {

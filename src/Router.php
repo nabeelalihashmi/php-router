@@ -8,7 +8,7 @@
  * @Licence: The MIT License (MIT) - Copyright (c) - http://opensource.org/licenses/MIT
  */
 
-namespace Buki;
+namespace Buki\Router;
 
 use Buki\Router\RouterCommand;
 use Buki\Router\RouterException;
@@ -43,7 +43,7 @@ class Router
     /**
      * Router Version
      */
-    const VERSION = '2.0.1';
+    const VERSION = '2.1.0';
 
     /**
      * @var string $baseFolder Pattern definitions for parameters of Route
@@ -558,14 +558,15 @@ class Router
     /**
      * Throw new Exception for Router Error
      *
-     * @param $message
+     * @param string $message
+     * @param int    $statusCode
      *
      * @return RouterException
-     * @throws
+     * @throws Exception
      */
-    protected function exception($message = ''): RouterException
+    protected function exception($message = '', int $statusCode = 500): RouterException
     {
-        return new RouterException($message);
+        return new RouterException($message, $statusCode);
     }
 
     /**
