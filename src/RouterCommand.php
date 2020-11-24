@@ -49,6 +49,11 @@ class RouterCommand
     protected $middlewares = [];
 
     /**
+     * @var array
+     */
+    protected $markedMiddlewares = [];
+
+    /**
      * RouterCommand constructor.
      *
      * @param string   $baseFolder
@@ -302,8 +307,14 @@ class RouterCommand
     {
         $middlewareMethod = 'handle'; // For now, it's constant.
         $controller = $this->resolveClass($middleware, $info['path'], $info['namespace']);
+
+        if (in_array($className = get_class($controller), $this->markedMiddlewares)) {
+            return true;
+        }
+        array_push($this->markedMiddlewares, $className);
+
         if (!method_exists($controller, $middlewareMethod)) {
-            return $this->exception("{$middlewareMethod}() method is not found in {$command} class.");
+            return $this->exception("{$middlewareMethod}() method is not found in {$middleware} class.");
         }
 
         $parameters = $this->resolveCallbackParameters(new ReflectionMethod($controller, $middlewareMethod), $params);
