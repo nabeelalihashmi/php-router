@@ -54,7 +54,7 @@ $ composer require izniburak/router
 ```php
 require 'vendor/autoload.php';
 
-use Buki\Router;
+use Buki\Router\Router;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -81,6 +81,8 @@ $router->run();
 ## Docs
 Documentation page: [Buki\Router Docs][doc-url]
 
+Changelogs: [Buki\Router Changelogs][changelog-url]
+
 ## Support
 [izniburak's homepage][author-url]
 
@@ -103,5 +105,6 @@ Documentation page: [Buki\Router Docs][doc-url]
 
 [mit-url]: http://opensource.org/licenses/MIT
 [doc-url]: https://github.com/izniburak/php-router/wiki
+[changelog-url]: https://github.com/izniburak/php-router/wiki/Changelogs
 [author-url]: http://burakdemirtas.org
 [twitter-url]: https://twitter.com/izniburak
