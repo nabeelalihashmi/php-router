@@ -43,7 +43,7 @@ class Router
     /**
      * Router Version
      */
-    const VERSION = '2.1.0';
+    const VERSION = '2.2.0';
 
     /**
      * @var string $baseFolder Pattern definitions for parameters of Route
@@ -375,6 +375,8 @@ class Router
             return true;
         }
 
+        $only = $options['only'] ?? [];
+        $except = $options['except'] ?? [];
         $controller = $this->resolveClassName($controller);
         $classMethods = get_class_methods($controller);
         if ($classMethods) {
@@ -390,6 +392,15 @@ class Router
 
                     $methodVar = lcfirst(preg_replace('/' . $method . '/i', '', $methodName, 1));
                     $methodVar = strtolower(preg_replace('%([a-z]|[0-9])([A-Z])%', '\1-\2', $methodVar));
+
+                    if (!empty($only) && !in_array($methodVar, $only)) {
+                        continue;
+                    }
+
+                    if (!empty($except) && in_array($methodVar, $except)) {
+                        continue;
+                    }
+
                     $ref = new ReflectionMethod($controller, $methodName);
                     $endpoints = [];
                     foreach ($ref->getParameters() as $param) {
@@ -770,9 +781,10 @@ class Router
      */
     protected function getRequestUri(): string
     {
-        $dirname = dirname($this->request()->server->get('SCRIPT_NAME'));
+        $script = $this->request()->server->get('SCRIPT_NAME');
+        $dirname = dirname($script);
         $dirname = $dirname === '/' ? '' : $dirname;
-        $basename = basename($_SERVER['SCRIPT_NAME']);
+        $basename = basename($script);
         $uri = str_replace([$dirname, $basename],null, $this->request()->server->get('REQUEST_URI'));
         return $this->clearRouteName(explode('?', $uri)[0]);
     }
