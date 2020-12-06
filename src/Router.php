@@ -43,7 +43,7 @@ class Router
     /**
      * Router Version
      */
-    const VERSION = '2.2.0';
+    const VERSION = '2.2.1';
 
     /**
      * @var string $baseFolder Pattern definitions for parameters of Route
