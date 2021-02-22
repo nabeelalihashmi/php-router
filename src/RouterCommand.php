@@ -4,10 +4,11 @@ namespace Buki\Router;
 
 use Closure;
 use Exception;
-use ReflectionException;
-use ReflectionFunction;
-use ReflectionMethod;
 use Reflector;
+use ReflectionClass;
+use ReflectionMethod;
+use ReflectionFunction;
+use ReflectionException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -82,7 +83,6 @@ class RouterCommand
         foreach ($this->middlewares['middlewares'] as $middleware) {
             $this->beforeAfter($middleware);
         }
-
     }
 
     /**
@@ -127,8 +127,12 @@ class RouterCommand
     ) {
         if (null === self::$instance) {
             self::$instance = new static(
-                $baseFolder, $paths, $namespaces,
-                $request, $response, $middlewares
+                $baseFolder,
+                $paths,
+                $namespaces,
+                $request,
+                $response,
+                $middlewares
             );
         }
 
@@ -275,7 +279,12 @@ class RouterCommand
     {
         $parameters = [];
         foreach ($reflection->getParameters() as $key => $param) {
-            $class = $param->getClass();
+            // $class = $param->getClass();
+
+            $class = $param->getType() && !$param->getType()->isBuiltin()
+                ? new ReflectionClass($param->getType()->getName())
+                : null;
+            
             if (!is_null($class) && $class->isInstance($this->request)) {
                 $parameters[] = $this->request;
             } elseif (!is_null($class) && $class->isInstance($this->response)) {
